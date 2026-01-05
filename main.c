@@ -29,6 +29,7 @@ unsigned int g_old_scrollh = 0;
 unsigned int g_new_scrollh = 0;
 unsigned int g_old_scrollv = 0;
 unsigned int g_new_scrollv = 0;
+unsigned int g_frame_counter = 0;
 
 enum Direction
 {
@@ -196,8 +197,43 @@ void main(void)
         SMS_waitForVBlank();
         UNSAFE_SMS_copySpritestoSAT();
         SMS_initSprites();
-        UNSAFE_SMS_loadNTiles(&tails__tiles__bin[0 * 12 * 32], SPRITE_TILES, 12);
-        drawPlayer(&player.coords);
+        if (player.is_moving == 0)
+        {
+            g_frame_counter = 0;
+            if (player.direction == RIGHT)
+            {
+                UNSAFE_SMS_loadNTiles(&tails__tiles__bin[0 * 12 * 32], SPRITE_TILES,12);
+                drawPlayer(&player.coords);
+            }
+            else if (player.direction == LEFT)
+            {
+                UNSAFE_SMS_loadNTiles(&tails__tiles__bin[1 * 12 * 32], SPRITE_TILES,12);
+                drawPlayer(&player.coords);
+            }
+        }
+        else if (player.is_moving == 1)
+        {
+            g_frame_counter++;
+            if ((g_frame_counter % 4) == 0)
+            {
+                player.running_ix += 1;
+                if (player.running_ix > (player.running_frames-1))
+                {
+                    player.running_ix = 0; // reset ix
+                }
+            }
+
+            if (player.direction == RIGHT)
+            {
+                UNSAFE_SMS_loadNTiles(&tails__tiles__bin[(player.running_animation_right+player.running_ix) * 12 * 32], SPRITE_TILES,12);
+                drawPlayer(&player.coords);
+            }
+            else if (player.direction == LEFT)
+            {
+                UNSAFE_SMS_loadNTiles(&tails__tiles__bin[(player.running_animation_left+player.running_ix) * 12 * 32], SPRITE_TILES,12);
+                drawPlayer(&player.coords);
+            }
+        }
         ks = SMS_getKeysStatus();
         if (ks)
         {
@@ -233,6 +269,10 @@ void main(void)
                     loadMetaTileMapColumn(x, g_metatile_x, g_metatile_y, g_metatile_x_offset, g_metatile_y_offset);
                 }
                 g_old_scrollh = g_new_scrollh;
+            }
+            else
+            {
+                player.is_moving = 0;
             }
             // ...END CHECK FOR HORIZONTAL MOVEMENT
             // START CHECK FOR VERTICAL MOVEMENT...
