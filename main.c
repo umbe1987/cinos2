@@ -1,6 +1,6 @@
 #include "SMSlib.h" // we're including the library with the functions we will use
 #include "./build/bank2.h"  // we're including the assets we created before
-#include "./map/map1_l1.h"
+#include "./build/bank3.h"
 
 #define BG_TILES 0
 #define METATILE_GRAPHICS 16     // in tiles, we have 4x4 tiles within a meta-tile of 32x32 pixels
