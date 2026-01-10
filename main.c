@@ -1,5 +1,5 @@
-#include "SMSlib.h" // we're including the library with the functions we will use
-#include "./build/bank2.h"  // we're including the assets we created before
+#include "SMSlib.h"        // we're including the library with the functions we will use
+#include "./build/bank2.h" // we're including the assets we created before
 #include "./build/bank3.h"
 
 #define BG_TILES 0
@@ -18,6 +18,7 @@
 #define START_X_OFFSET 3 // metatile_x offset
 #define START_Y_OFFSET 0 // metatile_y offset
 #define SPEED 5
+#define N_HEROES 3
 
 unsigned int g_metatile_x = START_X;
 unsigned int g_metatile_y = START_Y;
@@ -30,6 +31,7 @@ unsigned int g_new_scrollh = 0;
 unsigned int g_old_scrollv = 0;
 unsigned int g_new_scrollv = 0;
 unsigned int g_frame_counter = 0;
+unsigned int g_character_tile_ix = 0; // 0=Sonic, 1=Tails, 2=Knuckles
 
 enum Direction
 {
@@ -43,6 +45,10 @@ struct Coordinates
     unsigned int x;
     unsigned int y;
 };
+const unsigned char *characters[N_HEROES] = {
+    sonic__tiles__bin,
+    tails__tiles__bin,
+    knuckles__tiles__bin};
 struct Player
 {
     struct Coordinates coords;
@@ -55,6 +61,7 @@ struct Player
     unsigned int running_animation_left;
     unsigned int running_ix;
     unsigned int running_frames;
+    const unsigned char *tiles;
 };
 
 void initPlayer(struct Player *p)
@@ -70,6 +77,12 @@ void initPlayer(struct Player *p)
     p->running_animation_left = 8;
     p->running_ix = 0;
     p->running_frames = 6;
+    p->tiles = characters[g_character_tile_ix];
+}
+
+void nextCharacter(struct Player *p)
+{
+    p->tiles = characters[++g_character_tile_ix % N_HEROES];
 }
 
 // used to increment or decrement metatile_offset index by an offset up to a given maximum value
@@ -178,7 +191,7 @@ void loadAssets(void)
     SMS_loadBGPalette(bg__palette__bin);
     SMS_loadPSGaidencompressedTiles(bg__tiles__psgcompr, BG_TILES);
     drawScreenByRow();
-    SMS_loadSpritePalette(tails__palette__bin);
+    SMS_loadSpritePalette(players__palette__bin);
 }
 
 void main(void)
@@ -197,17 +210,21 @@ void main(void)
         SMS_waitForVBlank();
         UNSAFE_SMS_copySpritestoSAT();
         SMS_initSprites();
+        if (SMS_getKeysReleased() & PORT_A_KEY_2)
+            {
+                nextCharacter(&player);
+            }
         if (player.is_moving == 0)
         {
             g_frame_counter = 0;
             if (player.direction == RIGHT)
             {
-                UNSAFE_SMS_loadNTiles(&tails__tiles__bin[0 * 12 * 32], SPRITE_TILES,12);
+                UNSAFE_SMS_loadNTiles(&player.tiles[0 * 12 * 32], SPRITE_TILES, 12);
                 drawPlayer(&player.coords);
             }
             else if (player.direction == LEFT)
             {
-                UNSAFE_SMS_loadNTiles(&tails__tiles__bin[1 * 12 * 32], SPRITE_TILES,12);
+                UNSAFE_SMS_loadNTiles(&player.tiles[1 * 12 * 32], SPRITE_TILES, 12);
                 drawPlayer(&player.coords);
             }
         }
@@ -217,7 +234,7 @@ void main(void)
             if ((g_frame_counter % 4) == 0)
             {
                 player.running_ix += 1;
-                if (player.running_ix > (player.running_frames-1))
+                if (player.running_ix > (player.running_frames - 1))
                 {
                     player.running_ix = 0; // reset ix
                 }
@@ -225,12 +242,12 @@ void main(void)
 
             if (player.direction == RIGHT)
             {
-                UNSAFE_SMS_loadNTiles(&tails__tiles__bin[(player.running_animation_right+player.running_ix) * 12 * 32], SPRITE_TILES,12);
+                UNSAFE_SMS_loadNTiles(&player.tiles[(player.running_animation_right + player.running_ix) * 12 * 32], SPRITE_TILES, 12);
                 drawPlayer(&player.coords);
             }
             else if (player.direction == LEFT)
             {
-                UNSAFE_SMS_loadNTiles(&tails__tiles__bin[(player.running_animation_left+player.running_ix) * 12 * 32], SPRITE_TILES,12);
+                UNSAFE_SMS_loadNTiles(&player.tiles[(player.running_animation_left + player.running_ix) * 12 * 32], SPRITE_TILES, 12);
                 drawPlayer(&player.coords);
             }
         }
@@ -238,7 +255,7 @@ void main(void)
         if (ks)
         {
             // START CHECK FOR HORIZONTAL MOVEMENT...
-            if ((ks & PORT_A_KEY_RIGHT) && (g_metatile_x < ((MAP_WIDTH / METATILE_WIDTH)-8)))
+            if ((ks & PORT_A_KEY_RIGHT) && (g_metatile_x < ((MAP_WIDTH / METATILE_WIDTH) - 8)))
             {
                 player.direction = RIGHT;
                 player.is_moving = 1;
